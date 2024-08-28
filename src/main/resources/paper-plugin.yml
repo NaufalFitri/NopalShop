@@ -1,0 +1,6 @@
+name: NopalShop
+version: '1.0-SNAPSHOT'
+main: org.Nopal.nopalShop.NopalShop
+api-version: '1.21'
+authors: [ Nopal ]
+description: Library For Orang
