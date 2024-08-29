@@ -1,8 +1,9 @@
-package org.Nopal.nopalShop;
+package org.Nopal.nopalShop.Gui;
 
 import net.kyori.adventure.text.Component;
+import org.Nopal.nopalShop.Data.PDC;
+import org.Nopal.nopalShop.Data.TranslateColor;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -18,9 +19,9 @@ import org.bukkit.plugin.Plugin;
 import java.util.Objects;
 import java.util.Set;
 
-public class ShopGui implements Listener {
+public class ShopGui extends CategoryGui implements Listener {
 
-    private static Inventory inv;
+    public static Inventory maininv;
     public static Plugin plugin;
 
     public ShopGui(Plugin plugin) {
@@ -33,9 +34,10 @@ public class ShopGui implements Listener {
         Set<String> categories = Objects.requireNonNull(config.getConfigurationSection("Mainshop.Category")).getKeys(false);
 
         assert Guiname != null;
-        inv = Bukkit.createInventory(null, size, Component.text(Guiname));
+        maininv = Bukkit.createInventory(null, size, Component.text(Guiname));
 
         for (String category : categories) {
+
             String itemName = config.getString("Mainshop.Category." + category + ".Item");
             String displayName = config.getString("Mainshop.Category." + category + ".displayName");
             int itemslot = config.getInt("Mainshop.Category." + category + ".Slot");
@@ -49,14 +51,17 @@ public class ShopGui implements Listener {
                     ItemMeta itemmeta = itemstack.getItemMeta();
 
                     if (displayName != null) {
-                        itemmeta.displayName(Component.text(ChatColor.translateAlternateColorCodes('&', displayName)));
+                        itemmeta.displayName(Component.text(TranslateColor.text('&', displayName)));
                     } else {
                         itemmeta.displayName(Component.text(category));
                     }
 
                     itemstack.setItemMeta(itemmeta);
 
-                    inv.setItem(itemslot, itemstack);
+                    PDC.setdata(itemstack, "category", category);
+                    NavigationBar.bar(maininv.getSize(), maininv, 1, category, category);
+                    maininv.setItem(itemslot, itemstack);
+
                 }
             }
 
@@ -65,7 +70,7 @@ public class ShopGui implements Listener {
     }
 
     public static void OpenInventory(Player p) {
-        p.openInventory(inv);
+        p.openInventory(maininv);
     }
 
     public static void items(Inventory inv) {
@@ -78,9 +83,29 @@ public class ShopGui implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void OnPlayerClick(final InventoryClickEvent e) {
-        if (e.getInventory().equals(inv)) {
+        if (e.getInventory().equals(maininv)) {
             e.setCancelled(true);
         }
+
+        Player p = (Player) e.getWhoClicked();
+        ItemStack selectItem = e.getCurrentItem();
+
+        if (!Objects.isNull(PDC.getdata(selectItem, "category", false))) {
+
+            Object data = PDC.getdata(selectItem, "category", false);
+            p.openInventory(gui((String) data));
+
+        } else if (!Objects.isNull(PDC.getdata(selectItem, "nextpage", false)) || !Objects.isNull(PDC.getdata(selectItem, "prevpage", false))) {
+            Object data = PDC.getdata(selectItem, "nextpage", false) == null ? PDC.getdata(selectItem, "prevpage", false) : PDC.getdata(selectItem, "nextpage", false);
+            p.openInventory(gui((String) data));
+
+        }
+
+        assert selectItem != null;
+        if (selectItem.getType().equals(Material.BARRIER)) {
+            p.closeInventory();
+        }
+
     }
 
 }

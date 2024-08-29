@@ -1,6 +1,7 @@
 package org.Nopal.nopalShop;
 
 import net.milkbowl.vault.economy.Economy;
+import org.Nopal.nopalShop.Gui.ShopGui;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
@@ -20,14 +21,14 @@ public class Commands implements CommandExecutor {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String s, @NotNull String[] strings) {
-        if (!(sender instanceof Player)) return true;
+        if (!(sender instanceof Player p)) return true;
 
-        Player p = (Player) sender;
         OfflinePlayer op = Bukkit.getServer().getOfflinePlayer(p.getName());
         Economy econ = NopalShop.getEconomy();
 
 
         if (cmd.getName().equalsIgnoreCase("nsreload")) {
+            Configurations.reload();
             plugin.reloadConfig();
             plugin.getServer().getPluginManager().disablePlugin(plugin);
             plugin.getServer().getPluginManager().enablePlugin(plugin);

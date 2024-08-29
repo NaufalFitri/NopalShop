@@ -1,7 +1,10 @@
 package org.Nopal.nopalShop;
 
 import net.kyori.adventure.text.Component;
+import org.Nopal.nopalShop.Gui.CategoryGui;
+import org.Nopal.nopalShop.Gui.ShopGui;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import net.milkbowl.vault.chat.Chat;
@@ -15,6 +18,7 @@ import java.util.Objects;
 public final class NopalShop extends JavaPlugin {
 
     FileConfiguration config = getConfig();
+    private static NopalShop instance;
 
     public static Economy econ = null;
     public static Permission perms = null;
@@ -22,6 +26,8 @@ public final class NopalShop extends JavaPlugin {
 
     @Override
     public void onEnable() {
+
+        instance = this;
 
         new Configurations(this, getConfig());
 
@@ -31,6 +37,14 @@ public final class NopalShop extends JavaPlugin {
         getServer().sendMessage(Component.text(prefix + "NopalShop Reloaded"));
 
         getServer().getPluginManager().registerEvents(new ShopGui(this), this);
+        getServer().getPluginManager().registerEvents(new CategoryGui(), this);
+
+        saveDefaultConfig();
+
+        Configurations.CategoryConfig(getConfig());
+        Configurations.get().options().copyDefaults(true);
+        Configurations.save();
+
 
         // Register Commands
 
@@ -40,6 +54,7 @@ public final class NopalShop extends JavaPlugin {
         
         Objects.requireNonNull(getCommand("nsreload")).setExecutor(new Commands(this));
         Objects.requireNonNull(getCommand("shop")).setExecutor(new Commands(this));
+        CategoryGui.init();
 
         if (!setupEconomy() ) {
             getLogger().severe("Disabled due to no Vault dependency found!");
@@ -93,6 +108,10 @@ public final class NopalShop extends JavaPlugin {
 
     public static Chat getChat() {
         return chat;
+    }
+
+    public static Plugin plugin(){
+        return instance;
     }
 
     @Override
