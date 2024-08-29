@@ -1,0 +1,14 @@
+name: NopalShop
+version: '1.0-SNAPSHOT'
+main: org.Nopal.nopalShop.NopalShop
+api-version: '1.21'
+authors: [ Nopal ]
+description: Library For Orang
+depend: [Vault]
+commands:
+  nsreload:
+    usage: /<command>
+    description: reload nopal shop
+  shop:
+    usage: /<command>
+    description: open nopal shop
