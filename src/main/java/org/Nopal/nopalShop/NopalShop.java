@@ -1,7 +1,9 @@
 package org.Nopal.nopalShop;
 
 import net.kyori.adventure.text.Component;
+import org.Nopal.nopalShop.Gui.AddressGui;
 import org.Nopal.nopalShop.Gui.CategoryGui;
+import org.Nopal.nopalShop.Gui.PlayerCart;
 import org.Nopal.nopalShop.Gui.ShopGui;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
@@ -23,48 +25,59 @@ public final class NopalShop extends JavaPlugin {
     public static Economy econ = null;
     public static Permission perms = null;
     public static Chat chat = null;
+    public static String prefix;
 
     @Override
     public void onEnable() {
 
+        prefix = config.getString("Prefix");
+
         instance = this;
+        config = getConfig();
 
-        new Configurations(this, getConfig());
-
-        String prefix = (String) config.get("Prefix");
+        setupConfigurations();
+        registerEvents();
+        registerCommands();
+        setupDependencies();
 
         getLogger().info("NopalShop Enabled");
         getServer().sendMessage(Component.text(prefix + "NopalShop Reloaded"));
 
-        getServer().getPluginManager().registerEvents(new ShopGui(this), this);
-        getServer().getPluginManager().registerEvents(new CategoryGui(), this);
+    }
 
+    private void setupConfigurations() {
+        new Configurations(this, config);
         saveDefaultConfig();
 
-        Configurations.CategoryConfig(getConfig());
+        Configurations.AddressFolder();
+
+        Configurations.CategoryConfig(config);
         Configurations.get().options().copyDefaults(true);
         Configurations.save();
+    }
 
+    private void registerEvents() {
+        getServer().getPluginManager().registerEvents(new ShopGui(this), this);
+        getServer().getPluginManager().registerEvents(new CategoryGui(), this);
+        getServer().getPluginManager().registerEvents(new PlayerCart(), this);
+        getServer().getPluginManager().registerEvents(new AddressGui(), this);
+        CategoryGui.init();
+        AddressGui.init();
+    }
 
-        // Register Commands
-
-        for (RegisteredServiceProvider<?> service : getServer().getServicesManager().getRegistrations(Economy.class)) {
-            getLogger().info("Registered Economy Service: " + service.getProvider().getClass().getName());
-        }
-        
+    private void registerCommands() {
         Objects.requireNonNull(getCommand("nsreload")).setExecutor(new Commands(this));
         Objects.requireNonNull(getCommand("shop")).setExecutor(new Commands(this));
-        CategoryGui.init();
+    }
 
-        if (!setupEconomy() ) {
+    private void setupDependencies() {
+        if (!setupEconomy()) {
             getLogger().severe("Disabled due to no Vault dependency found!");
             getServer().getPluginManager().disablePlugin(this);
-            return;
+        } else {
+            setupPermissions();
+            setupChat();
         }
-
-        setupPermissions();
-        setupChat();
-
     }
 
     private boolean setupChat() {

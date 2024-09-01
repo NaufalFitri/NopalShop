@@ -26,14 +26,16 @@ public class Commands implements CommandExecutor {
         OfflinePlayer op = Bukkit.getServer().getOfflinePlayer(p.getName());
         Economy econ = NopalShop.getEconomy();
 
-
         if (cmd.getName().equalsIgnoreCase("nsreload")) {
+
             Configurations.reload();
             plugin.reloadConfig();
             plugin.getServer().getPluginManager().disablePlugin(plugin);
             plugin.getServer().getPluginManager().enablePlugin(plugin);
             return true;
+
         } else if (cmd.getName().equalsIgnoreCase("shop")) {
+
             ShopGui.OpenInventory(p);
             return true;
         }

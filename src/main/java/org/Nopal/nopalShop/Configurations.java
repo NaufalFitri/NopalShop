@@ -1,21 +1,24 @@
 package org.Nopal.nopalShop;
 
+import org.Nopal.nopalShop.Gui.AddressGui;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Configurations {
 
     public static File file;
     public static FileConfiguration cconfig;
+    public static File addressFolder;
+    public static ConcurrentHashMap<OfflinePlayer, FileConfiguration> addresses = new ConcurrentHashMap();
 
     public Configurations(Plugin plugin , FileConfiguration config) {
 
@@ -68,6 +71,52 @@ public class Configurations {
 
     }
 
+    public static void AddressFolder() {
+        addressFolder = new File(NopalShop.plugin().getDataFolder(), "playerAddress");
+        if (!addressFolder.exists()) {
+            addressFolder.mkdirs();
+        }
+
+        File[] files = addressFolder.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (files != null) {
+            for (File file : files) {
+
+                FileConfiguration userfile = YamlConfiguration.loadConfiguration(file);
+                String filename = file.getName().replace(".yml", "");
+                addresses.put(Bukkit.getOfflinePlayer(UUID.fromString(filename)), userfile);
+                Location loc = userfile.getLocation("address");
+                AddressGui.createItemAddress(loc, Bukkit.getOfflinePlayer(UUID.fromString(filename)));
+
+            }
+        }
+
+    }
+
+    public static void createAddress(UUID playerID, Location loc) {
+        File userAddress = new File(addressFolder, playerID + ".yml");
+        if (!userAddress.exists()) {
+            try {
+
+                userAddress.createNewFile();
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        FileConfiguration userConfig = YamlConfiguration.loadConfiguration(userAddress);
+        userConfig.set("address", loc);
+        try {
+
+            userConfig.save(userAddress);
+            addresses.put(Bukkit.getOfflinePlayer(playerID), userConfig);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        YamlConfiguration.loadConfiguration(userAddress);
+    }
+
     public static void save() {
         try {
             cconfig.save(file);
@@ -82,7 +131,7 @@ public class Configurations {
 
     public static void reload() {
         cconfig = YamlConfiguration.loadConfiguration(file);
-    }
 
+    }
 
 }

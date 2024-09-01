@@ -18,94 +18,114 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
-public class ShopGui extends CategoryGui implements Listener {
+import static org.Nopal.nopalShop.Data.PDC.*;
+
+public class ShopGui implements Listener {
 
     public static Inventory maininv;
     public static Plugin plugin;
 
     public ShopGui(Plugin plugin) {
         ShopGui.plugin = plugin;
-        
+        ShopGui.maininv = createInventory(plugin);
+    } // Initialize ShopGui inventory
+
+    private Inventory createInventory(Plugin plugin) {
         FileConfiguration config = plugin.getConfig();
-
         int size = config.getInt("Mainshop.Size");
-        String Guiname = config.getString("Mainshop.GuiName");
+        String guiName = config.getString("Mainshop.GuiName");
+        Inventory inventory = Bukkit.createInventory(null, size, Component.text(Objects.requireNonNull(guiName)));
+
         Set<String> categories = Objects.requireNonNull(config.getConfigurationSection("Mainshop.Category")).getKeys(false);
-
-        assert Guiname != null;
-        maininv = Bukkit.createInventory(null, size, Component.text(Guiname));
-
         for (String category : categories) {
-
-            String itemName = config.getString("Mainshop.Category." + category + ".Item");
-            String displayName = config.getString("Mainshop.Category." + category + ".displayName");
-            int itemslot = config.getInt("Mainshop.Category." + category + ".Slot");
-
-            if (itemName != null) {
-
-                Material material = Material.getMaterial(itemName.toUpperCase());
-
-                if (material != null) {
-                    ItemStack itemstack = new ItemStack(material);
-                    ItemMeta itemmeta = itemstack.getItemMeta();
-
-                    if (displayName != null) {
-                        itemmeta.displayName(Component.text(TranslateColor.text('&', displayName)));
-                    } else {
-                        itemmeta.displayName(Component.text(category));
-                    }
-
-                    itemstack.setItemMeta(itemmeta);
-
-                    PDC.setdata(itemstack, "category", category);
-                    NavigationBar.bar(maininv.getSize(), maininv, 1, category, category);
-                    maininv.setItem(itemslot, itemstack);
-
-                }
-            }
-
+            NavigationBar.bar(inventory.getSize(), inventory, 1, category, category);
+            addItem(inventory, config, category);
         }
+        return inventory;
+    } // Create ShopGui / MainInv inventory
 
-    }
+    private void addItem(Inventory inv, FileConfiguration config, String category) {
+        String itemName = config.getString("Mainshop.Category." + category + ".Item");
+        if (itemName != null) {
+            Material material = Material.getMaterial(itemName.toUpperCase());
+            if (material != null) {
+                ItemStack itemStack = createItem(config, category, material);
+                int itemSlot = config.getInt("Mainshop.Category." + category + ".Slot");
+                inv.setItem(itemSlot, itemStack);
+            }
+        }
+    } // Add Items to the inventory
+
+    private ItemStack createItem(FileConfiguration config, String category, Material material) {
+
+        ItemStack itemStack = new ItemStack(material);
+        ItemMeta itemMeta = itemStack.getItemMeta();
+
+        String displayName = config.getString("Mainshop.Category." + category + ".displayName");
+        itemMeta.displayName(Component.text(TranslateColor.text('&', Objects.requireNonNullElse(displayName, category))));
+
+        itemStack.setItemMeta(itemMeta);
+        PDC.setdata(itemStack, "category", category);
+
+        return itemStack;
+    } // Create the item
 
     public static void OpenInventory(Player p) {
         p.openInventory(maininv);
-    }
 
-    public static void items(Inventory inv) {
-        return;
-    }
+        ItemStack cart = ItemStack.of(Material.MINECART);
 
-    protected void Items() {
-        return;
-    }
+        CategoryGui.setdata(cart, "playerCart", p.getUniqueId()); //Set Data
 
-    @EventHandler(priority = EventPriority.NORMAL)
-    public void OnPlayerClick(final InventoryClickEvent e) {
-        if (e.getInventory().equals(maininv)) {
-            e.setCancelled(true);
-        }
+        ItemMeta cartMeta = cart.getItemMeta();
+        cartMeta.displayName(Component.text(TranslateColor.text('&', "&f" + p.getName() + "'s Cart")));
+        cart.setItemMeta(cartMeta);
+
+        maininv.setItem(maininv.getSize() - 5, cart);
+
+    } // Opening the inventory
+
+    @EventHandler(priority = EventPriority.LOW)
+    private void OnPlayerClick(final InventoryClickEvent e) {
 
         Player p = (Player) e.getWhoClicked();
         ItemStack selectItem = e.getCurrentItem();
+        UUID playerID = p.getUniqueId();
 
-        if (!Objects.isNull(PDC.getdata(selectItem, "category", false))) {
+        if (selectItem == null) return;
 
-            Object data = PDC.getdata(selectItem, "category", false);
-            p.openInventory(gui((String) data));
+        if (e.getInventory().equals(maininv)) {
+            e.setCancelled(true);
+            if (selectItem.getType().equals(Material.BARRIER)) {
+                p.closeInventory();
+            } else if (hasData(selectItem, "playerCart")) {
 
-        } else if (!Objects.isNull(PDC.getdata(selectItem, "nextpage", false)) || !Objects.isNull(PDC.getdata(selectItem, "prevpage", false))) {
-            Object data = PDC.getdata(selectItem, "nextpage", false) == null ? PDC.getdata(selectItem, "prevpage", false) : PDC.getdata(selectItem, "nextpage", false);
-            p.openInventory(gui((String) data));
+                if (PlayerCart.hasCart(playerID)) {
+
+                    p.openInventory(PlayerCart.playerCart(playerID));
+
+                } else {
+
+                    p.sendMessage(Component.text(TranslateColor.text('&', "&cYou dont have a list of items yet!")));
+
+                }
+            }
+        }
+
+        if (!Objects.isNull(getdata(selectItem, "category", false))) {
+
+            Object data = getdata(selectItem, "category", false);
+            p.openInventory(CategoryGui.gui((String) data, p));
+
+        } else if (!Objects.isNull(getdata(selectItem, "nextpage", false)) || !Objects.isNull(getdata(selectItem, "prevpage", false))) {
+
+            Object data = getdata(selectItem, "nextpage", false) == null ? getdata(selectItem, "prevpage", false) : getdata(selectItem, "nextpage", false);
+            p.openInventory(CategoryGui.gui((String) data, p));
 
         }
 
-        assert selectItem != null;
-        if (selectItem.getType().equals(Material.BARRIER)) {
-            p.closeInventory();
-        }
-
-    }
+    } // Event detection in the ShopGui inventory
 
 }
